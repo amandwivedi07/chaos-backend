@@ -1,0 +1,11 @@
+# Local configuration — secrets live here, never in the repo.
+.env
+.env.local
+
+# Firebase service account — never commit
+secrets/
+*.serviceaccount.json
+
+# Build output and locally stored media.
+bin/
+uploads/

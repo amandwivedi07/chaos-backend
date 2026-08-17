@@ -1,0 +1,67 @@
+# Production stack for app.joinchaos.ai.
+#
+# Deliberately a STANDALONE file rather than an overlay on docker-compose.yml.
+# Compose appends `ports` across files instead of replacing them, so an overlay
+# would keep the dev mappings and publish Postgres on 5433 to the whole
+# internet. Run it on its own:
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Nothing here is reachable from outside the host. Only the API is published,
+# and only on loopback — Caddy terminates TLS and proxies to it.
+name: chaos
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chaos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: chaos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chaos"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Inside the network the neighbours answer on their standard ports; the
+      # shifted host ports in the dev file exist only to dodge collisions.
+      DATABASE_URL: postgres://chaos:${POSTGRES_PASSWORD}@postgres:5432/chaos?sslmode=disable
+      REDIS_ADDR: redis:6379
+      PORT: "8080"
+    ports:
+      # Loopback only. Publishing 0.0.0.0 here would expose the API on :8090
+      # without TLS, straight past Caddy.
+      - "127.0.0.1:8090:8080"
+    volumes:
+      # Avatars live here and must survive a redeploy. Ownership comes from the
+      # image (see docker/Dockerfile) since the process runs as uid 10001.
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  uploads:

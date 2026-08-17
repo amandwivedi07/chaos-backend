@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS ai_connections;
+DROP TABLE IF EXISTS facts;
+DROP TABLE IF EXISTS profiles;
