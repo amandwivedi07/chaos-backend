@@ -187,7 +187,7 @@ func run(cfg *config.Config, log *zap.Logger) error {
 	groupsHandler := grouphandler.New(groupsService)
 
 	conversations := convservice.New(conversationsRepo, usersRepo, chaos,
-		profilesService, groupsService, hub, notifier, log, cfg.Storage.PublicBaseURL)
+		profilesService, groupsService, hub, notifier, log, cfg.App.InviteBaseURL)
 	threads.inner = conversations
 	people.inner = conversations
 	conversationsHandler := convhandler.New(conversations, conversations)

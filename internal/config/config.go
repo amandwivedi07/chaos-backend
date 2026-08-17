@@ -50,6 +50,12 @@ type PushConfig struct {
 type AppConfig struct {
 	Name string
 	Env  string // development | staging | production
+
+	// Public base for invite links — the marketing site, not the API host.
+	// Deliberately separate from Storage.PublicBaseURL: that one builds avatar
+	// URLs and has to keep pointing at whatever serves /uploads, so the two
+	// cannot share a value even though both are "the public base URL".
+	InviteBaseURL string
 }
 
 type HTTPConfig struct {
@@ -122,8 +128,9 @@ func Load(envFile string) (*Config, error) {
 
 	cfg := &Config{
 		App: AppConfig{
-			Name: v.GetString("APP_NAME"),
-			Env:  v.GetString("APP_ENV"),
+			Name:          v.GetString("APP_NAME"),
+			Env:           v.GetString("APP_ENV"),
+			InviteBaseURL: v.GetString("INVITE_BASE_URL"),
 		},
 		HTTP: HTTPConfig{
 			Port:            v.GetString("PORT"),
@@ -195,6 +202,7 @@ func (c *Config) validate() error {
 
 func setDefaults(v *viper.Viper) {
 	v.SetDefault("APP_NAME", "chaos")
+	v.SetDefault("INVITE_BASE_URL", "https://joinchaos.ai")
 	v.SetDefault("APP_ENV", "development")
 	v.SetDefault("PORT", "8080")
 	v.SetDefault("ALLOWED_ORIGINS", "*")
