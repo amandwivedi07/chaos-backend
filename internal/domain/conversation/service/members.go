@@ -64,7 +64,10 @@ func (s *service) AddMembers(ctx context.Context, convID, userID uuid.UUID, req 
 	}
 
 	for _, name := range added {
-		s.system(ctx, convID, fmt.Sprintf("%s joined the conversation.", name))
+		joined := fmt.Sprintf("%s joined the conversation.", name)
+		s.system(ctx, convID, joined)
+		// Exclude the person doing the adding — they are looking at the sheet.
+		s.push(ctx, convID, userID, s.pushTitle(conv), joined)
 	}
 	if len(added) > 0 {
 		s.notifyMembers(ctx, convID, realtime.Event{Type: realtime.EventConversationsChanged})
@@ -108,7 +111,8 @@ func (s *service) inviteOf(conv *entity.Conversation) *dto.InviteResponse {
 // Join takes the caller into a conversation from an invite link, setting the
 // display name and photo they chose on the way in.
 func (s *service) Join(ctx context.Context, convID, userID uuid.UUID, req dto.JoinRequest) (*dto.ConversationResponse, error) {
-	if _, err := s.repo.Get(ctx, convID); err != nil {
+	conv, err := s.repo.Get(ctx, convID)
+	if err != nil {
 		return nil, err
 	}
 	already, err := s.repo.IsMember(ctx, convID, userID)
@@ -140,8 +144,13 @@ func (s *service) Join(ctx context.Context, convID, userID uuid.UUID, req dto.Jo
 		if err := s.repo.AddMember(ctx, convID, userID); err != nil {
 			return nil, err
 		}
-		s.system(ctx, convID, fmt.Sprintf("%s joined the conversation.", user.Name))
+		joined := fmt.Sprintf("%s joined the conversation.", user.Name)
+		s.system(ctx, convID, joined)
 		s.notifyMembers(ctx, convID, realtime.Event{Type: realtime.EventConversationsChanged})
+		// Everyone already in the room hears about it, except the person who
+		// just walked in. Push only reaches the ones without an open socket —
+		// see push(), which treats a live connection as presence.
+		s.push(ctx, convID, userID, s.pushTitle(conv), joined)
 	}
 	return s.Get(ctx, convID, userID)
 }
