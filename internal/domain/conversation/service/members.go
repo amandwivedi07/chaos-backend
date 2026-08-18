@@ -64,10 +64,18 @@ func (s *service) AddMembers(ctx context.Context, convID, userID uuid.UUID, req 
 	}
 
 	for _, name := range added {
-		joined := fmt.Sprintf("%s joined the conversation.", name)
-		s.system(ctx, convID, joined)
+		s.system(ctx, convID, fmt.Sprintf("%s joined the conversation.", name))
+	}
+	// One push however many people were added. A notification per person means
+	// adding four friends buzzes everyone else four times.
+	if len(added) > 0 {
+		body := fmt.Sprintf("%s joined the conversation.", added[0])
+		if len(added) > 1 {
+			body = fmt.Sprintf("%s and %d others joined the conversation.",
+				added[0], len(added)-1)
+		}
 		// Exclude the person doing the adding — they are looking at the sheet.
-		s.push(ctx, convID, userID, s.pushTitle(conv), joined)
+		s.push(ctx, convID, userID, s.pushTitle(conv), body)
 	}
 	if len(added) > 0 {
 		s.notifyMembers(ctx, convID, realtime.Event{Type: realtime.EventConversationsChanged})

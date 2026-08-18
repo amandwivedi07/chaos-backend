@@ -56,6 +56,10 @@ services:
       # Avatars live here and must survive a redeploy. Ownership comes from the
       # image (see docker/Dockerfile) since the process runs as uid 10001.
       - uploads:/app/uploads
+      # The Firebase service-account key, mounted read-only from the host
+      # rather than copied into the image — an image layer would carry the
+      # private key into every registry and cache it ever touches.
+      - ./secrets/firebase.json:/app/secrets/firebase.json:ro
     depends_on:
       postgres:
         condition: service_healthy
