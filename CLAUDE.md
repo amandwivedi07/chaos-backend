@@ -80,11 +80,17 @@ Both live in `domain/conversation/entity` and both have tests. Change them only
 on purpose.
 
 - **`ShouldReply`** — when Chaos speaks. Being named always works. Otherwise it
-  waits: a question only pulls it in after the group has gone back and forth a
-  couple of times, and a thread that has run five messages without it gets one
-  turn unasked. Chaos is the friend who answers when it matters, not the one
-  who replies to everything. **`direct` short-circuits all of it** — a private
-  thread is you talking TO Chaos, and restraint there reads as being ignored.
+  waits: a question pulls it in once the group has said anything at all, and a
+  thread that has run three messages without it gets one turn unasked. Chaos is
+  the friend who answers when it matters, not the one who replies to
+  everything. **`direct` short-circuits all of it** — a private thread is you
+  talking TO Chaos, and restraint there reads as being ignored.
+- **`Mentioned`** — what counts as being named. Not just "@chaos": the name
+  opening a sentence, after a greeting, or last after a comma. The trailing
+  form insists on that comma, or "that meeting was chaos!" is a mention and the
+  app starts answering people about their day. Widen it only with tests — the
+  cost of a false positive is a billed model call and a reply nobody asked
+  for.
 - **`Decision.Resolve`** — when a vote closes. A winner needs at least two votes
   AND a strict lead. One person clicking their own suggestion is not the group
   deciding, and a tie is precisely the argument the vote was meant to end.
@@ -144,6 +150,10 @@ keeps the cycle from ever forming.
 ## Conventions & gotchas
 
 - Files < 300 lines, functions < 50; split before you exceed.
+- **A Chaos turn has two shapes and the prompt picks between them.** Answer the
+  question, or compare options. Cards belong to the second only — a question
+  that comes back as a decision matrix is the failure this replaced. See
+  `internal/ai/reply.go`.
 - **A model call must never cost someone the thing they typed.** `Send` commits
   the person's message before it asks Chaos anything, and a failed turn returns
   the message with no reply rather than an error.
