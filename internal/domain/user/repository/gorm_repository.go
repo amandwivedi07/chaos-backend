@@ -166,9 +166,17 @@ func (r *gormUserRepository) AnonymizeAndDelete(ctx context.Context, id uuid.UUI
 			return apperrors.Database("users.anonymize", err)
 		}
 		// Membership ends everywhere so peers stop seeing the account.
-		if err := tx.Exec(`UPDATE space_members SET left_at = now()
-			WHERE user_id = ? AND left_at IS NULL`, id).Error; err != nil {
-			return apperrors.Database("users.leave_spaces", err)
+		//
+		// This read "space_members" until now — a table Space Talk has and
+		// Chaos does not, carried over with the rest of the module. Postgres
+		// failed the statement, the transaction rolled back, and deleting your
+		// account has therefore never once worked here. Play requires that
+		// path, so it was a store blocker as well as a broken promise.
+		for _, table := range []string{"conversation_members", "group_members"} {
+			if err := tx.Exec(`UPDATE `+table+` SET left_at = now()
+				WHERE user_id = ? AND left_at IS NULL`, id).Error; err != nil {
+				return apperrors.Database("users.leave_"+table, err)
+			}
 		}
 		if err := tx.Delete(&userModel{}, "id = ?", id).Error; err != nil {
 			return apperrors.Database("users.soft_delete", err)
