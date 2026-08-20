@@ -130,6 +130,7 @@ func (s *service) chaosTurn(ctx context.Context, convID, askerID uuid.UUID) (*en
 		Facts:        s.factsFor(ctx, askerID),
 		GroupName:    groupName,
 		GroupMemory:  groupMemory,
+		AskerID:      askerID,
 	})
 	if err != nil {
 		return nil, err

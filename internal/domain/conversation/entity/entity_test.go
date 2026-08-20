@@ -20,13 +20,20 @@ func TestShouldReply(t *testing.T) {
 	}{
 		{"named directly", "@Chaos what do you think?", 12, 0, false, true},
 		{"named mid-sentence, any case", "ok @chaos help", 12, 1, false, true},
+		// Being addressed by name is the way people actually do it.
+		{"name and a comma, no @", "Chaos, explain this to all of us.", 12, 0, false, true},
+		{"name with no punctuation at all", "Chaos argue both sides", 12, 0, false, true},
+		{"greeting then the name", "hey chaos can you settle this", 12, 0, false, true},
+		{"name at the very end", "what do you think, chaos?", 12, 0, false, true},
+		{"name opening a later sentence", "I disagree. Chaos, who is right?", 12, 0, false, true},
 		{"first line in an empty room", "Where should we go?", 0, 0, false, true},
-		{"question, but the group only just started", "Where to?", 1, 1, false, false},
+		{"question with nothing said since its last turn", "Where to?", 4, 0, false, false},
+		{"question once the group has said anything", "Where to?", 1, 1, false, true},
 		{"question after some back and forth", "Can we keep it under 2L?", 4, 2, false, true},
-		{"statement after some back and forth", "I want a beach.", 4, 3, false, false},
+		{"statement one line after its last turn", "I want a beach.", 4, 1, false, false},
 		{"trailing whitespace still reads as a question", "Where to?  ", 4, 2, false, true},
-		{"stalled thread gets one turn unasked", "and nightlife", 9, 5, false, true},
-		{"just under the stall threshold", "and nightlife", 9, 4, false, false},
+		{"stalled thread gets one turn unasked", "and nightlife", 9, 3, false, true},
+		{"just under the stall threshold", "and nightlife", 9, 2, false, false},
 		// A private thread is you talking TO Chaos. Restraint there reads as
 		// being ignored, so every one of the restrained cases flips.
 		{"private: a bare statement still gets an answer", "I want a beach.", 4, 3, true, true},
@@ -115,5 +122,44 @@ func TestPresence(t *testing.T) {
 				t.Errorf("Presence = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// Mentioned is what makes tagging work at all. It used to require a literal
+// "@chaos", which nobody types — so being asked something by name did nothing.
+func TestMentioned(t *testing.T) {
+	addressed := []string{
+		"@Chaos what do you think?",
+		"ok @chaos help",
+		"Chaos, explain this to all of us.",
+		"chaos: settle this",
+		"Chaos argue both sides",
+		"hey chaos",
+		"Hey Chaos, fact-check that",
+		"pls chaos catch me up",
+		"so what do you reckon, chaos?",
+		"I disagree. Chaos, who is right?",
+	}
+	for _, text := range addressed {
+		if !Mentioned(text) {
+			t.Errorf("Mentioned(%q) = false, want true", text)
+		}
+	}
+
+	// Talking about the app, or using the ordinary word, is not addressing it.
+	ignored := []string{
+		"this weekend was absolute chaos honestly",
+		"the chaos app is pretty good",
+		"total chaos in the office today",
+		"that meeting was chaos!",
+		"it was pure chaos.",
+		"last night was chaos",
+		"I want a beach.",
+		"",
+	}
+	for _, text := range ignored {
+		if Mentioned(text) {
+			t.Errorf("Mentioned(%q) = true, want false", text)
+		}
 	}
 }

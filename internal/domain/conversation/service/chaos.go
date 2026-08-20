@@ -26,6 +26,9 @@ type ReplyRequest struct {
 	// conversation belongs to, if any.
 	GroupName   string
 	GroupMemory []string
+	// AskerID is whose turn this answers. Resolved to a name in buildInput so
+	// the model can address them and knows whose facts it is holding.
+	AskerID uuid.UUID
 }
 
 // ChaosReply is a turn, already in domain shapes and ready to persist.
@@ -148,6 +151,7 @@ func buildInput(req ReplyRequest) ai.ReplyInput {
 		Facts:       facts,
 		GroupName:   req.GroupName,
 		GroupMemory: req.GroupMemory,
+		Asker:       names[req.AskerID],
 	}
 }
 

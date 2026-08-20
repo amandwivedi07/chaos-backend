@@ -97,6 +97,11 @@ type ReplyInput struct {
 	// whole point of the profile: the plan should already know they cannot do
 	// more than four nights.
 	Facts []Fact
+	// Asker is who this turn is for, by name. Without it the model has a
+	// FACTS block belonging to an anonymous "person asking" and no safe way
+	// to use it — facts about one person must never be read out as something
+	// the group knows.
+	Asker string
 }
 
 // ExtractInput is a body of text to mine for durable facts, plus what is

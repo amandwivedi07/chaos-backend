@@ -175,19 +175,48 @@ func (d Decision) Resolve() *uuid.UUID {
 // ---- when Chaos speaks ----
 
 var (
-	mentionRE  = regexp.MustCompile(`(?i)@chaos`)
+	atMentionRE = regexp.MustCompile(`(?i)@chaos\b`)
+
+	// Addressed by name, without the @. Nobody types the @ in a real chat —
+	// the app's own suggestion chips say "Chaos, explain this to all of us."
+	// and for a long time that did not count as being asked. Three shapes
+	// cover almost everything people actually send:
+	//
+	//   "Chaos, what do you think"     name opening a sentence
+	//   "hey chaos can you help"       a greeting, then the name
+	//   "what do you think, chaos?"    name at the very end, after a comma
+	//
+	// The trailing form insists on that comma. Without it "that meeting was
+	// chaos!" is a mention, and the ordinary English word is common enough
+	// that the app would answer people talking about their day.
+	//
+	// It will occasionally fire on "chaos was crazy yesterday". That trade is
+	// deliberate: an unasked-for answer is a shrug, a Chaos that ignores its
+	// own name is the product being broken.
+	vocativeRE = regexp.MustCompile(
+		`(?i)(?:^|[.!?]\s*)chaos\b[\s,:;!?—-]` +
+			`|\b(?:hey|hi|hello|yo|ok|okay|oi|arre|please|pls)\s+chaos\b` +
+			`|,\s*chaos\s*[?!.]*$`)
+
 	questionRE = regexp.MustCompile(`\?\s*$`)
 )
 
-// Mentioned reports whether a line addresses Chaos directly.
-func Mentioned(text string) bool { return mentionRE.MatchString(text) }
+// Mentioned reports whether a line addresses Chaos directly — either with the
+// @ or by name.
+func Mentioned(text string) bool {
+	text = strings.TrimSpace(text)
+	return atMentionRE.MatchString(text) || vocativeRE.MatchString(text)
+}
 
 // ShouldReply decides whether a newly sent line earns a turn from Chaos.
 //
 // The rule is about not being the friend who answers every message. Being
-// named always works. Otherwise Chaos waits: a question only pulls it in once
-// the group has gone back and forth a couple of times, and a thread that has
-// run five messages without it gets one turn whether or not anyone asked.
+// named always works. Otherwise Chaos waits: a question pulls it in as soon as
+// the group has said anything at all, and a thread that has run three messages
+// without it gets one turn whether or not anyone asked.
+//
+// Those two numbers used to be 2 and 5, which read as disinterest — you could
+// ask the room a question and watch Chaos sit it out.
 //
 // sinceChaos is how many messages have been said since its last turn (or the
 // whole history if it has never spoken).
@@ -202,9 +231,9 @@ func ShouldReply(text string, totalMessages, sinceChaos int, direct bool) bool {
 		return true
 	case totalMessages == 0:
 		return true
-	case questionRE.MatchString(strings.TrimSpace(text)) && sinceChaos >= 2:
+	case questionRE.MatchString(strings.TrimSpace(text)) && sinceChaos >= 1:
 		return true
 	default:
-		return sinceChaos >= 5
+		return sinceChaos >= 3
 	}
 }
