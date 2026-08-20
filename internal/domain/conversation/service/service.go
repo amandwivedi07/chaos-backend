@@ -255,7 +255,17 @@ func (s *service) MarkSeen(ctx context.Context, convID, userID uuid.UUID) error 
 	if !member {
 		return apperrors.NotFound("Conversation not found")
 	}
-	return s.repo.MarkSeen(ctx, convID, userID)
+	if err := s.repo.MarkSeen(ctx, convID, userID); err != nil {
+		return err
+	}
+	// Tell this one person's other surfaces that their list moved, so the
+	// unread dot on the home screen goes out at the same moment they open the
+	// thread. Only them: nobody else's count changed.
+	if s.hub != nil {
+		s.hub.NotifyUsers([]uuid.UUID{userID},
+			realtime.Event{Type: realtime.EventConversationsChanged})
+	}
+	return nil
 }
 
 // SearchUsers backs the add-people picker.
