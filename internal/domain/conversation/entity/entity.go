@@ -198,7 +198,12 @@ var (
 			`|\b(?:hey|hi|hello|yo|ok|okay|oi|arre|please|pls)\s+chaos\b` +
 			`|,\s*chaos\s*[?!.]*$`)
 
-	questionRE = regexp.MustCompile(`\?\s*$`)
+	// A question mark ANYWHERE, not only at the end. "Give me an option to
+	// choose...? And also why and what for" is plainly aimed at Chaos and got
+	// nothing, because the sentence carried on past the "?". Trailing-only was
+	// the tidy rule and the wrong one — people do not punctuate a chat message
+	// like an essay.
+	questionRE = regexp.MustCompile(`\?`)
 )
 
 // Mentioned reports whether a line addresses Chaos directly — either with the
@@ -231,7 +236,7 @@ func ShouldReply(text string, totalMessages, sinceChaos int, direct bool) bool {
 		return true
 	case totalMessages == 0:
 		return true
-	case questionRE.MatchString(strings.TrimSpace(text)) && sinceChaos >= 1:
+	case questionRE.MatchString(text) && sinceChaos >= 1:
 		return true
 	default:
 		return sinceChaos >= 3

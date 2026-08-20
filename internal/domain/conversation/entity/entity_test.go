@@ -32,6 +32,10 @@ func TestShouldReply(t *testing.T) {
 		{"question after some back and forth", "Can we keep it under 2L?", 4, 2, false, true},
 		{"statement one line after its last turn", "I want a beach.", 4, 1, false, false},
 		{"trailing whitespace still reads as a question", "Where to?  ", 4, 2, false, true},
+		// The mark does not have to be the last character. This exact message
+		// was sent and ignored.
+		{"question mark mid-message", "Give me a option to choose...? And also why and what for", 6, 2, false, true},
+		{"question buried in the middle", "wait what? we said Tuesday", 6, 1, false, true},
 		{"stalled thread gets one turn unasked", "and nightlife", 9, 3, false, true},
 		{"just under the stall threshold", "and nightlife", 9, 2, false, false},
 		// A private thread is you talking TO Chaos. Restraint there reads as
